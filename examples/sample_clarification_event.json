@@ -1,0 +1,29 @@
+{
+  "event_type": "tutorial_sufficiency_human_clarification",
+  "topic_id": "fictional-topic-001",
+  "product": "Example Product",
+  "locale_scope": [
+    "PT-BR",
+    "EN-USA",
+    "ES-LATAM"
+  ],
+  "operator_language": "PT-BR",
+  "status": "WAITING_ANSWER",
+  "reason": "Authorized release evidence confirms a new API capability but does not contain enough operational information to produce a safe customer tutorial.",
+  "missing_information": [
+    "HTTP method",
+    "endpoint path",
+    "authentication requirements",
+    "required request fields",
+    "optional request fields",
+    "successful response example",
+    "error behavior",
+    "usage limits"
+  ],
+  "safety_outcome": {
+    "generation_allowed": false,
+    "cms_mutation_allowed": false,
+    "human_clarification_required": true
+  },
+  "note": "Fictionalized public example. No production identifiers or private content are included."
+}
