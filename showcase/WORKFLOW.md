@@ -11,128 +11,129 @@ flowchart TD
     C --> D[Retrieve Existing Docs]
     D --> E[Analyze Coverage]
     E --> F[Choose Documentary Action]
-    F --> G{Enough Evidence for a Tutorial?}
+    F --> G{Tutorial Sufficiency}
 
-    G -- No --> H[Generate One Human Clarification]
+    G -- SUFFICIENT --> L[Generate Locale Drafts]
+
+    G -- INSUFFICIENT --> H[Generate One Human Clarification]
     H --> I[Wait for Human Answer]
     I --> J[Reprocess Answer]
     J --> K[Validate as Evidence]
     K --> G
 
-    G -- Yes --> L[Generate Locale Drafts]
-    L --> M[Validate Facts]
+    G -- NOT_APPLICABLE --> R[Build Documentation Scope Redirect]
+    R --> L
+
+    L --> S{Scope Redirect Active?}
+    S -- Yes --> SG[Per-Locale Semantic Scope Guard]
+    S -- No --> M[Factual Validation]
+    SG --> M
+
     M --> N[Capture Pre-Update Snapshot]
     N --> O[Build Preservation-First Preview]
     O --> P{Human Approves Exact Preview?}
-    P -- No --> Q[Stop / Revise]
-    P -- Yes --> R[Explicitly Authorize Draft Write]
-    R --> S[Write Bounded Draft Update]
-    S --> T[Read Back and Verify]
+    P -- No --> X[Stop / Revise]
+    P -- Yes --> Q[Explicitly Authorized Draft Write]
+    Q --> T[Independent Read-Back Verification]
 ~~~
 
 ---
 
-## 1. Source Collection
+## 1. Authorized Source Collection
 
-BIA starts from explicitly authorized product-change sources.
+BIA begins from configured product-change sources.
 
-External text is treated as data, not as authority over the agent.
+The source content is treated as data, not as instructions to the agent.
 
-The source layer may identify:
-
-- new features
-- fixes
-- API changes
-- changed procedures
-- release announcements
-- other approved product updates
-
-The fact that a source is authorized does not mean it is complete enough to become documentation.
+The system captures provenance and durable source state before downstream decisions.
 
 ---
 
 ## 2. Evidence Construction
 
-Source claims are converted into evidence records with provenance.
+Relevant source claims become explicit evidence records.
 
-The system keeps the distinction between:
+The system separates:
 
-- what the source explicitly supports
-- what is unknown
-- what is inferred
-- what existing documentation says
+- supported facts
+- incomplete facts
+- conflicting facts
+- unsupported claims
 
-Unsupported inference is not allowed to become factual evidence.
+Generated prose does not become evidence.
+
+Existing Help Center content does not silently become evidence either.
 
 ---
 
-## 3. Topic Resolution
+## 3. Canonical Topic Resolution
 
-Related claims are grouped into one canonical topic.
+Related claims are grouped into a topic-level unit.
 
-This prevents duplicate work and allows one clarification answer to serve all locales when the missing fact is topic-level rather than language-specific.
+This lets BIA reason once about a factual change while still evaluating documentation independently per locale.
+
+Topic identity supports:
+
+- deduplication
+- clarification
+- durable state
+- retries
+- auditability
 
 ---
 
 ## 4. Help Center Retrieval
 
-BIA retrieves existing Help Center content for each locale.
+BIA retrieves existing locale-specific documentation.
 
-The retrieved article can answer questions such as:
+Retrieval answers:
 
-- Is this topic already documented?
-- What article structure already exists?
-- Which parts appear to require updates?
-- What editorial pattern should be preserved?
+- Is there already an article about this topic?
+- Which locale article is the likely target?
+- What instructional pattern already exists?
 
-It cannot answer:
-
-- Is this old article still factually correct?
-- Can missing release details be inferred from historical prose?
-
-Existing content is comparison material, not an evidence source by default.
+The retrieved article may guide structure and continuity, but it is not automatically factual authority.
 
 ---
 
-## 5. Documentary Decision
+## 5. Coverage Analysis and Documentary Decision
 
-For each topic and locale, BIA decides whether the documentation path should continue.
+BIA compares authorized evidence against existing documentation.
 
 Possible outcomes include:
 
-- new article
-- update
+- new article needed
+- existing article needs update
 - no action
 - clarification required
 - conflict
-- ignored non-public content
+- development-only / non-public information
 
-A positive documentary decision is not yet permission to generate.
+A documentary decision is not the same thing as permission to generate or write.
 
 ---
 
 ## 6. Tutorial Sufficiency
 
-Before tutorial-style generation, BIA asks:
+BIA asks a separate question:
 
-> Do the authorized facts contain enough operational detail to teach the customer how to use the change correctly?
+> Is there enough authorized evidence to create the intended customer-facing instructional artifact?
 
-This is intentionally stricter than asking whether the release is true.
+The gate supports three outcomes.
 
-If essential operational information is absent, generation stops.
+### SUFFICIENT
 
-Examples of missing information may include:
+The intended tutorial is supported.
 
-- where the user starts
-- API method and endpoint
-- required fields
-- optional parameters
-- authentication
-- prerequisites
-- expected output
-- error states
-- limitations
-- complete examples
+### INSUFFICIENT
+
+The tutorial remains intended, but operational facts are missing.
+
+### NOT_APPLICABLE
+
+An authorized Human Clarification states that the public operational tutorial is not the intended artifact and defines a narrower public scope.
+
+The third outcome may not be inferred from silence or missing data.
 
 ---
 
@@ -140,36 +141,74 @@ Examples of missing information may include:
 
 If a topic-level factual gap affects all locales, BIA creates one clarification question rather than duplicating it by language.
 
-The question is expected to identify the concrete missing information.
+The question should identify the concrete missing information.
 
 The human answer is not immediately trusted as final documentation.
 
-It enters a reprocessing path where the answer is:
+It enters a bounded reprocessing path where the answer is:
 
 1. accepted into the clarification lifecycle
-2. evaluated for sufficiency
-3. checked for conflict
-4. promoted into authorized evidence only when valid
+2. bound to the exact clarification context
+3. converted into Human Clarification evidence
+4. semantically re-evaluated
+5. persisted through immutable or conflict-detecting artifacts
+6. reused only if later source semantics still match
 
 If the answer is still incomplete, the system remains blocked.
 
 ---
 
-## 8. Localized Generation
+## 8. Documentation Scope Redirect
 
-Only after evidence is sufficient does BIA generate customer-facing content.
+A Human Clarification may legitimately state that the missing operational details are intentionally not public.
 
-Generation must:
+In that case, BIA can produce a structured redirect containing:
 
-- remain inside the requested locale
-- preserve supported facts
-- use the existing article only as editorial/structural guidance
-- produce instructional content rather than changelog prose
-- avoid inventing operational details
+- public documentation goal
+- customer next step
+- prohibited public content
+
+This is not equivalent to making the tutorial sufficient.
+
+It changes the intended public artifact.
 
 ---
 
-## 9. Factual Validation
+## 9. Localized Generation
+
+Generation is permitted only after the topic has a valid public documentation objective.
+
+Without a redirect, generation must stay inside the supported tutorial evidence.
+
+With a redirect, generation must stay inside the narrower public scope.
+
+In both cases, generation must:
+
+- remain inside the requested locale
+- preserve supported facts
+- avoid unsupported operational detail
+- use existing docs only as editorial/structural guidance
+- avoid changelog-style pseudo-documentation when a real tutorial is intended
+
+---
+
+## 10. Semantic Scope Guard
+
+When a scope redirect is active, each generated locale is independently checked against that redirect.
+
+The guard verifies that the draft:
+
+- follows the allowed public goal
+- includes only the permitted next step
+- avoids prohibited public content
+- does not expand scope during translation
+- does not expose internal case history
+
+Any violation fails closed before the artifact is accepted.
+
+---
+
+## 11. Factual Validation
 
 Generated content is checked against the authorized evidence set.
 
@@ -179,13 +218,11 @@ The workflow expects a separate validation boundary before content can approach 
 
 ---
 
-## 10. Immutable Pre-Update Snapshot
+## 12. Immutable Pre-Update Snapshot
 
-Before an approved mutation, BIA captures the exact current article state needed for auditability and recovery.
+Before an approved mutation, BIA captures the exact current article state required for auditability and recovery.
 
-The snapshot is identity-bound and conflict-detecting.
-
-Its purpose is to answer:
+The snapshot answers:
 
 - What existed before the change?
 - Can the prior state be reconstructed?
@@ -193,12 +230,12 @@ Its purpose is to answer:
 
 ---
 
-## 11. Preservation-First Preview
+## 13. Preservation-First Preview
 
-BIA creates a reviewable candidate update that combines:
+BIA creates a reviewable candidate that combines:
 
 - preserved existing content
-- the supported new instructional delta
+- supported new delta
 - intended metadata/category changes
 - provenance context
 
@@ -213,21 +250,21 @@ Human review should be able to see what is:
 
 ---
 
-## 12. Explicit Approval
+## 14. Explicit Approval
 
 The operator approves the exact reviewed artifact.
 
-A later write should be bound to that reviewed state rather than to a vague statement such as “go ahead.”
+A later write should be bound to that reviewed state rather than to a vague “go ahead.”
 
-If the source, target article, or preview identity changes materially, the system should fail closed and require review again.
+If the source, target, or reviewed artifact changes materially, the system should fail closed and require review again.
 
 ---
 
-## 13. Bounded Draft Write
+## 15. Bounded Draft Write
 
 The CMS write path is intentionally narrower than the read path.
 
-The current safety model centers on:
+The safety model centers on:
 
 - draft status
 - exact target article
@@ -237,11 +274,13 @@ The current safety model centers on:
 - no delete
 - no automatic publish
 
+A review preview by itself never authorizes mutation.
+
 ---
 
-## 14. Independent Read-Back
+## 16. Independent Read-Back
 
-After mutation, BIA does not assume success because an API returned a 2xx response.
+After mutation, BIA does not assume success because an API returned a success status.
 
 It reads the target back and verifies the expected state.
 
@@ -259,7 +298,7 @@ This protects against:
 
 BIA persists durable context before exposing consequential workflow states.
 
-For Human Clarification, the pattern is:
+For Human Clarification:
 
 ~~~mermaid
 sequenceDiagram
@@ -279,16 +318,31 @@ sequenceDiagram
     end
 ~~~
 
-The system recovers the original question instead of generating a new one.
+For later semantic recovery, BIA preserves historical checkpoints and adds a separate immutable resolution artifact rather than rewriting history.
+
+---
+
+## Observability
+
+Operational stages should produce structured diagnostics sufficient to answer:
+
+- which stage ran
+- which topic/locale was affected
+- what stable result code occurred
+- whether a retry happened
+- whether a mutation occurred
+
+Sensitive or blocked generated content should not be dumped into logs merely for debugging convenience.
 
 ---
 
 ## Operational Principle
 
-At every stage, BIA should answer one of three things clearly:
+At every stage, BIA should be able to say one of four things clearly:
 
 1. **I have enough evidence to continue.**
 2. **I do not have enough evidence, and here is exactly what is missing.**
-3. **I cannot prove that the next action is safe, so I will stop.**
+3. **The intended public artifact has been explicitly narrowed by authorized human input.**
+4. **I cannot prove the next action is safe, so I will stop.**
 
 That is the behavior the workflow is designed to enforce.
