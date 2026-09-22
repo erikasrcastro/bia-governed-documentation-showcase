@@ -1,0 +1,36 @@
+{
+  "event_type": "documentation_scope_redirect",
+  "topic_id": "fictional-topic-001",
+  "product": "Example Product",
+  "locale_scope": [
+    "PT-BR",
+    "EN-USA",
+    "ES-LATAM"
+  ],
+  "source": "HUMAN_CLARIFICATION",
+  "tutorial_outcome": "NOT_APPLICABLE",
+  "clarification_result": "DOCUMENTATION_SCOPE_REDIRECT",
+  "documentation_scope_redirect": {
+    "public_documentation_goal": "State that the capability exists and that access is available through a controlled support process.",
+    "customer_next_step": "Contact support to request access or further information.",
+    "prohibited_public_content": [
+      "endpoint path",
+      "authentication details",
+      "request parameters",
+      "request or response examples",
+      "operational implementation instructions"
+    ]
+  },
+  "generation_policy": {
+    "scope_is_maximum_public_scope": true,
+    "localization_may_expand_scope": false,
+    "semantic_scope_guard_required": true
+  },
+  "safety_outcome": {
+    "tutorial_generation_required": false,
+    "scope_redirect_generation_allowed": true,
+    "cms_mutation_allowed": false,
+    "publication_allowed": false
+  },
+  "note": "Fictionalized public example. No production identifiers, private content, credentials, or internal implementation details are included."
+}
