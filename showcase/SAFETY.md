@@ -9,10 +9,11 @@ A documentation error can cause customers to:
 - send the wrong API request
 - misconfigure a product
 - misunderstand prerequisites
+- follow unsupported instructions
+- rely on information that was never meant to be public
 - lose trust in the Help Center
-- follow obsolete or unsupported instructions
 
-The system therefore treats factual uncertainty and external mutation as governance problems, not only prompt-engineering problems.
+The system therefore treats factual uncertainty, public-scope authority, and external mutation as governance problems, not only prompt-engineering problems.
 
 ---
 
@@ -31,17 +32,19 @@ The public safety model considers risks such as:
 - hallucinated operational instructions
 - release-note paraphrasing presented as a tutorial
 - unsupported inference from existing documentation
+- disclosure of intentionally non-public operational details
+- scope expansion during localization
 - cross-locale contamination
 - stale target articles
 - duplicate Human Clarification questions
 - partial persistence
 - duplicate retries after uncertain writes
-- content loss during article updates
-- silent metadata drift
+- content loss during updates
 - accidental publication
 - deletion
 - source prompt injection
 - mutation after the reviewed state has changed
+- diagnostic logs leaking blocked content
 
 ---
 
@@ -51,13 +54,17 @@ BIA stops instead of guessing when:
 
 - evidence is missing
 - evidence conflicts
+- tutorial evidence is insufficient
 - the target cannot be identified exactly
 - locale isolation cannot be proven
 - a required immutable artifact cannot be verified
-- a Human Clarification context conflicts with durable state
+- Human Clarification context conflicts with durable state
+- a persisted semantic resolution does not match its source checkpoint
+- a reused scope redirect no longer matches current source semantics
+- a Scope Guard reports a violation
 - a write outcome is uncertain
-- the remote read-back does not match the expected result
-- the reviewed artifact is no longer bound to the current state
+- remote read-back does not match the expected result
+- a reviewed artifact is no longer bound to the current state
 
 ---
 
@@ -69,7 +76,7 @@ Only configured, approved source types may contribute factual evidence.
 
 ### Existing documentation is not authority
 
-An old Help Center article may be useful for:
+An old Help Center article may help with:
 
 - structure
 - tone
@@ -97,7 +104,7 @@ BIA distinguishes:
 
 A change can be fully supported while still being unsafe to document as a tutorial.
 
-This gate prevents the agent from filling in details such as:
+This gate prevents the agent from filling in unsupported details such as:
 
 - API routes
 - methods
@@ -109,20 +116,57 @@ This gate prevents the agent from filling in details such as:
 - limits
 - error handling
 
-unless the authorized evidence supports them.
+---
+
+## Documentation Scope Redirect
+
+A Human Clarification can explicitly state that a public operational tutorial is **not** the intended outcome.
+
+In that case BIA may accept a narrower public scope.
+
+The redirect must come from authorized human evidence and define:
+
+- public documentation goal
+- customer next step
+- prohibited public content
+
+It may **not** be inferred from:
+
+- silence
+- missing evidence
+- release-note wording
+- model preference
+- convenience
+
+A redirect is a restriction, not permission to improvise.
+
+---
+
+## Scope Guard
+
+When a redirect exists, generated content is checked by a separate semantic guard before downstream acceptance.
+
+The guard is designed to catch:
+
+- operational instructions beyond the allowed scope
+- API details that should remain non-public
+- translation that broadens the public claim
+- internal case history leaking into public documentation
+- unsupported next steps
+
+A violation blocks the topic.
 
 ---
 
 ## Human-in-the-Loop Design
 
-Human involvement is not used everywhere.
-
-It is used at boundaries where missing context or consequence justifies it.
+Human involvement is used at boundaries where missing context or consequence justifies it.
 
 Examples:
 
 - missing operational facts
 - ambiguous documentary action
+- explicit public-scope decisions
 - conflicting evidence
 - exact preview approval
 - live mutation authorization
@@ -133,11 +177,11 @@ The goal is precise escalation, not generic human dependence.
 
 ## Least Privilege
 
-External adapters expose only the capabilities needed by the workflow.
+External adapters expose only the capabilities required by the workflow.
 
-A safe documentation agent should not receive broad CMS authority when the required operation is only a bounded draft update.
+A safe documentation agent should not receive broad CMS authority when the required action is only a bounded draft update.
 
-The current design intentionally excludes automatic:
+The design intentionally excludes automatic:
 
 - publication
 - deletion
@@ -152,12 +196,26 @@ BIA uses immutable or conflict-detecting artifacts for critical state.
 Examples include:
 
 - clarification context
+- reprocessing checkpoints
+- semantic-resolution artifacts
 - taxonomy snapshots
 - pre-update article snapshots
 - review artifacts
 - recovery checkpoints
 
 Stable identity lets the system detect when a retry is actually a conflict.
+
+Historical checkpoints are preserved rather than rewritten when later semantics evolve.
+
+---
+
+## Cross-Run Safety
+
+A previous Human Clarification outcome should not be reused merely because the topic name looks similar.
+
+Reuse is allowed only when the later workflow can bind the current source semantics to the exact earlier clarification context and persisted artifacts.
+
+Ambiguity fails closed.
 
 ---
 
@@ -178,7 +236,7 @@ Retries are allowed only when their semantics are known.
 
 - API call times out
 - assume it failed
-- send the same write again blindly
+- repeat the write blindly
 
 BIA is designed to avoid the second pattern.
 
@@ -190,7 +248,7 @@ An update should preserve the existing article unless an explicitly reviewed cha
 
 This is a safety property, not merely an editorial preference.
 
-The workflow therefore treats the old article body as the baseline and adds the supported delta.
+The workflow treats the previous article as the baseline and adds only the supported delta.
 
 ---
 
@@ -208,6 +266,8 @@ Execution authorization answers:
 
 Keeping these distinct prevents stale approval from becoming indefinite write authority.
 
+A successful test preview may explicitly end in **NO_PUBLICATION**.
+
 ---
 
 ## Prompt Injection
@@ -222,23 +282,34 @@ Instructions found inside:
 - imported documents
 - old Help Center articles
 
-must not redefine the agent’s system rules or permissions.
+must not redefine:
+
+- system instructions
+- permissions
+- credential policy
+- mutation authority
+- safety constraints
 
 ---
 
 ## Observability
 
-A safe agent must make its decisions reconstructable.
+Observability is a safety prerequisite.
 
-Important operational events should allow reviewers to understand:
+Important operational events should allow reviewers to reconstruct:
 
-- what evidence was used
+- what stage ran
+- what evidence path was used
 - why a topic was blocked
-- what clarification was requested
-- which immutable artifact was bound to the run
+- which locale was affected
+- what stable failure/result code occurred
 - whether a mutation occurred
 - whether read-back verification succeeded
 - where the workflow stopped
+
+Diagnostics should be structured and allow-listed.
+
+Blocked or sensitive generated content should not be logged merely for debugging convenience.
 
 ---
 
@@ -248,9 +319,11 @@ Recovery is not only reliability engineering.
 
 It is also a safety mechanism.
 
-A durable clarification context, for example, prevents a retry from producing a subtly different question after a partial failure.
+A durable clarification context prevents a retry from producing a subtly different question after partial failure.
 
-Likewise, a pre-update snapshot prevents recovery from depending on memory or regenerated guesses.
+An immutable semantic-resolution artifact lets the system evolve interpretation without rewriting historical checkpoints.
+
+A pre-update snapshot prevents recovery from depending on memory or regenerated guesses.
 
 ---
 
