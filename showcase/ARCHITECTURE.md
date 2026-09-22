@@ -2,9 +2,7 @@
 
 ## System Goal
 
-BIA is a governed documentation agent designed to transform authorized product changes into accurate Help Center updates without allowing language-model confidence to substitute for evidence.
-
-The architecture separates semantic interpretation from deterministic control.
+BIA is a governed documentation agent designed to transform authorized product changes into accurate Help Center updates without allowing language-model confidence to substitute for evidence or authority.
 
 > **LLM interprets. Software controls. Tools execute.**
 
@@ -14,23 +12,26 @@ The production implementation is private. This document describes the public arc
 
 ## Core Design
 
-BIA is not a single prompt connected directly to a CMS.
+BIA is not a prompt connected directly to a CMS.
 
 It is a staged workflow with explicit contracts between:
 
 - source ingestion
 - evidence construction
-- topic resolution
+- canonical topic resolution
 - Help Center retrieval
+- coverage analysis
 - documentary decisioning
 - tutorial-sufficiency evaluation
 - Human Clarification
+- documentation-scope redirect
 - localized generation
+- semantic Scope Guard
 - factual validation
 - immutable snapshots
-- human review
-- bounded external mutation
-- read-back verification
+- preservation-first preview
+- explicit external mutation authorization
+- independent read-back verification
 
 Each stage owns a narrow responsibility.
 
@@ -40,13 +41,14 @@ Each stage owns a narrow responsibility.
 
 ### Reasoning plane
 
-The model is used for tasks where semantic interpretation is useful, including:
+The model is used where semantic interpretation is useful, including:
 
-- understanding release-note meaning
-- resolving topic-level relationships
+- understanding source meaning
 - comparing evidence against existing documentation
-- deciding what information is still missing
-- generating natural-language documentation
+- determining whether operational information is missing
+- evaluating a Human Clarification answer
+- generating localized documentation
+- checking whether generated content stays inside an authorized public scope
 - validating semantic consistency
 
 ### Control plane
@@ -55,16 +57,16 @@ Deterministic software owns:
 
 - stable identities
 - locale boundaries
-- state transitions
+- lifecycle state
 - allowed actions
 - persistence rules
 - retry behavior
 - idempotency
 - mutation authorization
-- precondition checks
-- postcondition checks
-- artifact hashing
+- artifact identity
 - snapshot immutability
+- fail-closed transitions
+- external side-effect boundaries
 
 The model cannot grant itself new authority.
 
@@ -75,7 +77,7 @@ The model cannot grant itself new authority.
 ~~~mermaid
 flowchart TB
     subgraph Sources
-        A[Authorized Release Sources]
+        A[Authorized Product Sources]
         B[Approved Human Clarifications]
     end
 
@@ -92,13 +94,15 @@ flowchart TB
     end
 
     subgraph HumanLoop
-        I[Human Clarification]
+        I[Topic-Scoped Human Clarification]
         J[Human Answer]
         K[Evidence Revalidation]
+        R[Documentation Scope Redirect]
     end
 
     subgraph Authoring
         L[Localized Generation]
+        SG[Per-Locale Semantic Scope Guard]
         M[Factual Validation]
         N[Preservation-First Composition]
     end
@@ -107,8 +111,8 @@ flowchart TB
         O[Immutable Pre-Update Snapshot]
         P[Review Preview]
         Q[Explicit Human Approval]
-        R[Bounded Draft Write]
-        S[Independent Read-Back]
+        W[Bounded Draft Write]
+        X[Independent Read-Back]
     end
 
     A --> C
@@ -119,20 +123,26 @@ flowchart TB
     F --> G
     G --> H
 
-    H -->|insufficient| I
+    H -->|INSUFFICIENT| I
     I --> J
     J --> K
-    K --> C
+    K --> H
 
-    H -->|sufficient| L
-    L --> M
+    H -->|NOT_APPLICABLE| R
+    H -->|SUFFICIENT| L
+    R --> L
+
+    L --> SG
+    SG --> M
     M --> N
     N --> O
     O --> P
     P --> Q
-    Q --> R
-    R --> S
+    Q --> W
+    W --> X
 ~~~
+
+When no scope redirect exists, the Scope Guard path is effectively bypassed and factual validation remains the next semantic gate.
 
 ---
 
@@ -153,63 +163,43 @@ Generated prose never becomes evidence merely because BIA produced it.
 
 ---
 
-## Canonical Topic Model
+## Tutorial Sufficiency Is Not Factual Support
 
-BIA resolves related source claims into a topic-level unit before downstream decisions.
+BIA separates two questions:
 
-This allows the system to reason about a product change once while still evaluating locale-specific documentation independently.
+**Factual support:** Do we know that the change happened?
 
-Topic identity also supports:
-
-- deduplication
-- Human Clarification
-- state persistence
-- retries
-- auditability
-- evidence promotion
-
----
-
-## Documentary Decision Layer
-
-A topic may require different outcomes depending on existing documentation.
-
-Examples include:
-
-- create new documentation
-- update an existing article
-- take no action
-- request clarification
-- stop on conflict
-- ignore non-public or development-only information
-
-The decision is not equivalent to “generate text.”
-
-Generation is permitted only after the workflow has enough evidence to support the intended documentation.
-
----
-
-## Tutorial Sufficiency Gate
-
-This gate answers a different question from factual support.
-
-**Factual support:** Do we know that the product change happened?
-
-**Tutorial sufficiency:** Do we know enough to teach the user how to use it correctly?
+**Tutorial sufficiency:** Do we know enough to teach the customer how to use it safely?
 
 A release note may pass the first and fail the second.
 
-That distinction prevents BIA from converting changelog prose directly into pseudo-documentation.
+That distinction prevents changelog text from becoming pseudo-documentation.
 
-When operational details are missing, the workflow stops before generation.
+---
+
+## Three Tutorial Outcomes
+
+### `SUFFICIENT`
+
+Authorized evidence supports the intended public tutorial.
+
+### `INSUFFICIENT`
+
+The tutorial is still intended, but required operational evidence is missing.
+
+### `NOT_APPLICABLE`
+
+An authorized Human Clarification explicitly states that the public operational tutorial is not the intended outcome and supplies a narrower public documentation scope.
+
+The third outcome cannot be inferred from missing information, source silence, or model preference.
 
 ---
 
 ## Human Clarification Boundary
 
-When one topic is insufficient across multiple locales, BIA asks one topic-scoped question.
+When one topic-level gap affects multiple locales, BIA asks one topic-scoped question.
 
-The human-facing interaction is designed to be:
+The interaction is designed to be:
 
 - specific
 - answerable
@@ -219,31 +209,75 @@ The human-facing interaction is designed to be:
 
 The clarification context is persisted before the human-facing question is exposed.
 
-This creates a crash-safe recovery path if persistence succeeds but downstream materialization is interrupted.
+This creates a crash-safe recovery path.
+
+---
+
+## Documentation Scope Redirect
+
+A scope redirect is a structured human-authorized boundary containing:
+
+- public documentation goal
+- customer next step
+- prohibited public content
+
+It does not say “the tutorial is now complete.”
+
+It says “the intended public artifact is different and narrower.”
+
+This matters because a system should not keep requesting details that an authorized human has explicitly said must remain non-public.
+
+---
+
+## Cross-Run Recovery
+
+A validated redirect can be reused by a later workflow run only when the current source semantics still match the source package that produced the original clarification.
+
+Operational IDs that are intentionally ephemeral do not define semantic equality.
+
+The system instead binds reuse to stable source meaning and persisted immutable artifacts.
+
+Ambiguity or mismatch fails closed.
+
+---
+
+## Semantic Scope Guard
+
+When a redirect exists, generation receives it as a **maximum allowed public scope**.
+
+A separate semantic guard evaluates each locale after generation.
+
+The guard checks whether the generated public artifact:
+
+- follows the allowed documentation goal
+- includes only the permitted next step
+- avoids prohibited operational content
+- does not expand scope during localization
+- does not expose private case history
+
+A violation blocks the topic before downstream acceptance.
 
 ---
 
 ## Localization Model
 
-BIA supports multiple Help Center locales while keeping factual evidence stable.
+BIA supports:
 
-The factual core may be shared when appropriate, but each locale has an independent generation and validation path.
+- PT-BR
+- EN-USA
+- ES-LATAM
 
-This prevents:
+The factual core may be topic-scoped, but each locale has an independent generation and validation path.
 
-- cross-locale contamination
-- mixed-language article bodies
-- silent factual drift during translation
+Localization may change language and editorial form.
 
-Localization changes language and editorial form, not factual meaning.
+It may not change facts or authority.
 
 ---
 
 ## Preservation-First Update Model
 
 Existing articles are treated as content that must be preserved unless a reviewed update explicitly requires otherwise.
-
-The update path is therefore:
 
 ~~~mermaid
 flowchart LR
@@ -253,10 +287,10 @@ flowchart LR
     C --> F[Combined Candidate]
     E --> F
     F --> G[Human Review Preview]
-    G --> H[Authorized Draft Mutation]
+    G --> H[Explicitly Authorized Draft Mutation]
 ~~~
 
-This protects against a common failure mode in document automation: replacing a full article with only the newly generated fragment.
+This protects against replacing a complete article with only a newly generated fragment.
 
 ---
 
@@ -264,7 +298,7 @@ This protects against a common failure mode in document automation: replacing a 
 
 External write capability is deliberately narrow.
 
-The public architecture assumes:
+The architecture assumes:
 
 - draft-only updates
 - stable article identity
@@ -275,15 +309,15 @@ The public architecture assumes:
 - explicit authorization before consequential mutation
 - independent remote read-back after mutation
 
-If the system cannot establish whether a write succeeded, it does not blindly repeat the write.
+If the system cannot establish whether a write succeeded, it does not blindly repeat it.
 
 ---
 
 ## State and Persistence
 
-BIA uses durable external state because ephemeral workflow runners cannot be trusted to preserve operational history.
+BIA uses durable external state because ephemeral runners cannot be trusted to preserve operational history.
 
-Persisted artifacts include:
+Durable artifacts may include:
 
 - source cursors
 - source revisions
@@ -291,11 +325,30 @@ Persisted artifacts include:
 - evidence records
 - clarification context
 - clarification lifecycle state
+- immutable reprocess checkpoints
+- semantic-resolution artifacts
 - pre-update article snapshots
 - review artifacts
 - recovery checkpoints
 
-Identity-bound artifacts are designed to be immutable or conflict-detecting.
+Identity-bound artifacts are immutable or conflict-detecting.
+
+---
+
+## Observability
+
+Observability is part of the architecture, not an afterthought.
+
+Operational stages should expose safe structured metadata such as:
+
+- stage
+- topic
+- locale
+- stable result/failure code
+- retry state
+- mutation state
+
+Sensitive generated content should not be emitted merely to make debugging easier.
 
 ---
 
@@ -303,18 +356,19 @@ Identity-bound artifacts are designed to be immutable or conflict-detecting.
 
 BIA favors:
 
-- idempotent reads
 - deterministic identities
-- explicit retries
+- idempotent reads
+- bounded retries
 - bounded loops
-- read-back verification
+- durable state
 - conflict detection
 - stable failure codes
-- recovery from durable artifacts
+- read-back verification
+- safe recovery from persisted artifacts
 
 The goal is not “never fail.”
 
-The goal is to fail in a way that is visible, explainable, and recoverable without creating duplicate or destructive side effects.
+The goal is to fail in a way that is visible, explainable, recoverable, and non-destructive.
 
 ---
 
@@ -324,12 +378,14 @@ The important design choice is not the specific LLM provider.
 
 The important design choice is that **the LLM does not own authority**.
 
-The system can use a model for semantic reasoning while still keeping:
+BIA demonstrates how semantic model reasoning can coexist with:
 
-- permissions deterministic
-- side effects narrow
-- missing information explicit
-- human judgment available
-- recovery auditable
+- deterministic permissions
+- explicit evidence
+- human escalation
+- scope control
+- narrow side effects
+- durable recovery
+- observable safety gates
 
-That is the central engineering pattern demonstrated by BIA.
+That is the core engineering pattern behind the system.
