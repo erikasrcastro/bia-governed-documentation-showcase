@@ -1,16 +1,14 @@
 # BIA — Governed Documentation Agent
 
-**A safety-first, multilingual AI documentation system that turns product changes into evidence-grounded tutorials without hallucinating missing operational details.**
+**A safety-first, multilingual AI documentation system that turns product changes into evidence-grounded Help Center updates without hallucinating missing operational details or exceeding an approved public scope.**
 
-BIA was designed for a real Help Center workflow where product releases, fixes, feature changes, and internal announcements must become accurate customer documentation across multiple languages.
+BIA was designed for a real documentation workflow where product releases, fixes, feature changes, and internal announcements must become accurate customer documentation across multiple languages.
 
-The central engineering problem is simple to describe and surprisingly hard to solve:
+The central engineering problem is simple to state:
 
-> **A release note can prove that something changed without containing enough information to teach a customer how to use it.**
+> **A source can prove that something changed without proving enough to teach customers how to use it safely.**
 
 BIA treats that distinction as a first-class system constraint.
-
-Instead of copying changelog text into documentation—or asking an LLM to fill in the gaps—BIA separates **evidence**, **reasoning**, **state**, **human clarification**, **generation**, and **external mutation** behind explicit safety gates.
 
 > **Core principle:** LLM interprets. Software controls. Tools execute.
 
@@ -18,79 +16,92 @@ Instead of copying changelog text into documentation—or asking an LLM to fill 
 
 ## Why This Project Exists
 
-Documentation automation often fails in one of two ways:
+Documentation automation often fails in one of three ways:
 
-1. it behaves like a text transformer and republishes release-note language as customer documentation; or
-2. it generates plausible but unsupported instructions when the source material is incomplete.
+1. it republishes release-note language as if it were customer documentation;
+2. it invents plausible operational details when evidence is incomplete; or
+3. it ignores a human decision that some operational details are intentionally not public.
 
-Neither behavior is acceptable for operational documentation.
+BIA is designed to avoid all three.
 
-BIA was built to solve a harder problem:
+It separates:
 
-**How can an AI agent decide what changed, determine whether existing documentation needs work, know when the available evidence is insufficient, ask a human exactly what is missing, and update documentation without losing existing content or exceeding its authority?**
+- evidence
+- reasoning
+- durable state
+- Human Clarification
+- tutorial-sufficiency evaluation
+- documentation-scope control
+- localized generation
+- semantic guardrails
+- factual validation
+- review
+- external mutation
+
+behind explicit contracts and fail-closed boundaries.
 
 ---
 
 ## What BIA Demonstrates
 
-- Evidence-grounded agentic reasoning
-- Multilingual documentation workflows
-- Retrieval against existing Help Center content without treating that content as factual authority
-- Documentary decisioning per topic and locale
-- Tutorial-sufficiency evaluation before generation
-- Human-in-the-loop clarification when operational evidence is incomplete
-- Deterministic state, identity, idempotency, and retry boundaries
-- Immutable evidence and pre-update snapshots
-- Preservation-first review previews
-- Draft-only CMS mutation behind explicit authorization
-- Independent read-back verification after external writes
-- Crash-safe recovery for partially completed workflows
-- Fail-closed behavior at consequential boundaries
-- Full regression testing around live operational gates
+- evidence-grounded agentic reasoning
+- multilingual documentation workflows
+- locale-isolated Help Center retrieval
+- documentary decisioning per topic and locale
+- tutorial-sufficiency evaluation before generation
+- topic-scoped Human Clarification
+- crash-safe clarification recovery
+- deterministic identity and idempotency boundaries
+- immutable evidence and checkpoint artifacts
+- documentation-scope redirect from authorized human evidence
+- redirect-aware generation
+- independent semantic Scope Guard per locale
+- preservation-first review previews
+- draft-only CMS mutation behind explicit authorization
+- independent read-back verification
+- fail-closed behavior at consequential boundaries
+- structured observability
+- full regression testing around live safety gates
 
 ---
 
-## Golden Case: Release Note → Clarification Instead of Hallucination
+## Golden Case: From Missing Tutorial Facts to a Safe Scope Redirect
 
-A controlled live validation exposed exactly the failure mode BIA was intended to prevent.
+A controlled live validation exposed two related documentation risks.
 
-An authorized product release announced a new API capability. The source proved that the capability existed, but it did **not** contain enough operational information to produce a useful tutorial.
+First, an authorized release announced a new API capability. The source proved that the capability existed, but did **not** contain enough information to write a real operational tutorial.
 
-A weaker automation could have produced something like:
+BIA stopped before generation and created **one topic-scoped Human Clarification** instead of inventing:
 
-> “A new endpoint was added. It creates and launches a campaign in a single call.”
-
-That is still a release note. It does not teach the customer how to use the feature.
-
-BIA instead stopped the workflow **before generation**.
-
-Its tutorial-sufficiency gate identified the missing operational information required to write a real tutorial, including:
-
-- HTTP method
-- endpoint path
+- route
+- method
+- authentication
 - request structure
-- required and optional parameters
-- authentication and permissions
-- successful response shape
-- error behavior
-- request/response examples
-- usage restrictions or rate limits
+- parameters
+- response behavior
+- examples
+- limits
 - prerequisites
 
-BIA then generated **one topic-scoped Human Clarification question** for the missing facts.
+Then the human answer introduced a second valid outcome:
 
-The result:
+> the operational tutorial was intentionally **not** meant to be public.
 
-- no invented documentation
-- no duplicated question per language
-- one human answer can become evidence for all supported locales after revalidation
-- no CMS mutation while evidence is insufficient
-- crash-safe recovery if clarification persistence is interrupted
-- full regression suite passing at the validated milestone
+Instead of repeatedly asking for forbidden details, BIA accepted a narrower authorized documentation goal:
 
-This behavior is now a reference case for the project:
+- say that the capability exists;
+- direct interested customers to support;
+- do not publish operational API instructions.
 
-> **Release notes are evidence. They are not automatically publishable tutorials.**
+That became a structured **Documentation Scope Redirect**.
+
+A later controlled E2E validation recovered the exact redirect across runs, generated PT-BR / EN-USA / ES-LATAM content inside the allowed scope, passed a separate semantic Scope Guard for each locale, and produced a preservation-first review preview.
+
+The test was explicitly accepted as:
+
+`TEST_ACCEPTED / NO_PUBLICATION`
+
+No CMS mutation or publication was authorized by that validation.
 
 See [showcase/CASE_STUDY.md](showcase/CASE_STUDY.md).
 
@@ -104,22 +115,62 @@ flowchart TD
     B --> C[Canonical Topic]
     C --> D[Help Center Retrieval]
     D --> E[Coverage + Documentary Decision]
-    E --> F{Tutorial Evidence Sufficient?}
+    E --> F{Tutorial Sufficiency}
 
-    F -- No --> G[One Topic-Scoped Human Clarification]
+    F -- SUFFICIENT --> J[Localized Generation]
+
+    F -- INSUFFICIENT --> G[One Topic-Scoped Human Clarification]
     G --> H[Human Answer]
     H --> I[Evidence Revalidation]
     I --> F
 
-    F -- Yes --> J[Localized Generation]
-    J --> K[Factual Validation]
-    K --> L[Immutable Pre-Update Snapshot]
-    L --> M[Preservation-First Review Preview]
-    M --> N{Human Approval}
-    N -- No --> O[Stop / Revise]
-    N -- Yes --> P[Explicitly Authorized Draft Write]
-    P --> Q[Independent Read-Back Verification]
+    F -- NOT_APPLICABLE --> R[Documentation Scope Redirect]
+    R --> J
+
+    J --> K{Scope Redirect Active?}
+    K -- Yes --> S[Per-Locale Semantic Scope Guard]
+    K -- No --> L[Factual Validation]
+    S --> L
+
+    L --> M[Immutable Pre-Update Snapshot]
+    M --> N[Preservation-First Review Preview]
+    N --> O{Explicit Human Approval}
+    O -- No --> P[Stop / Revise]
+    O -- Yes --> Q[Bounded Draft Write]
+    Q --> T[Independent Read-Back Verification]
 ~~~
+
+---
+
+## Tutorial Sufficiency Has Three Outcomes
+
+### `SUFFICIENT`
+
+Authorized evidence can support the intended public tutorial.
+
+### `INSUFFICIENT`
+
+A tutorial is still intended, but required operational facts are missing.
+
+### `NOT_APPLICABLE`
+
+An authorized Human Clarification explicitly states that the operational tutorial is not the intended public outcome and supplies a narrower replacement scope.
+
+The third outcome is deliberately strict. It cannot be inferred from silence, missing data, a release note, or model preference.
+
+---
+
+## Documentation Scope Redirect
+
+A scope redirect defines three things:
+
+- **public documentation goal** — what may be communicated publicly
+- **customer next step** — what the customer should do
+- **prohibited public content** — what must not be exposed or taught
+
+Generation may localize wording, but it may not expand the authorized public scope.
+
+A separate semantic Scope Guard evaluates generated content before it can continue.
 
 ---
 
@@ -131,63 +182,30 @@ The production design isolates three Help Center locales:
 - EN-USA
 - ES-LATAM
 
-Factual evidence is topic-scoped where appropriate. Localization may change language and editorial form, but it may not change facts.
+Factual evidence may be topic-scoped. Localization may change language and editorial form, but it may not change facts or expand authority.
 
-When one factual gap affects all locales, BIA asks **one** Human Clarification question rather than creating three duplicates.
-
----
-
-## Architecture
-
-BIA uses a hybrid agent architecture:
-
-~~~mermaid
-flowchart LR
-    S[Authorized Sources] --> E[Evidence Layer]
-    E --> T[Topic Resolution]
-    T --> R[Retrieval]
-    R --> D[Documentary Decision]
-    D --> U[Tutorial Sufficiency]
-    U -->|insufficient| H[Human Clarification]
-    H --> E
-    U -->|sufficient| G[Localized Generation]
-    G --> V[Factual Validation]
-    V --> P[Preview + Approval]
-    P --> W[Bounded Draft Write]
-
-    C[Deterministic Control Layer] --- E
-    C --- D
-    C --- U
-    C --- H
-    C --- V
-    C --- P
-    C --- W
-~~~
-
-The LLM is used where semantic interpretation is valuable. Deterministic software owns identity, permissions, transitions, validation, persistence rules, retry behavior, and external side effects.
-
-More detail: [showcase/ARCHITECTURE.md](showcase/ARCHITECTURE.md).
+When one factual gap affects all locales, BIA asks **one** Human Clarification question rather than duplicating it three times.
 
 ---
 
 ## Safety Model
-
-BIA is designed to prefer an explicit stop over plausible invention.
 
 Key invariants include:
 
 - authorized evidence only
 - no silent promotion of existing documentation into factual truth
 - no tutorial generation from insufficient evidence
+- no human-scope redirect inferred without explicit authorized human evidence
+- no generation beyond a validated scope redirect
 - no unsupported operational claims
 - no cross-locale writes
 - no automatic publication
 - no content deletion
-- immutable pre-update snapshots
-- no blind retry after an uncertain mutation
+- immutable critical artifacts
+- no blind retry after uncertain mutation
 - explicit authorization before consequential writes
 - independent read-back after mutation
-- crash-safe recovery using stable identities
+- structured observability without leaking blocked content
 
 See [showcase/SAFETY.md](showcase/SAFETY.md).
 
@@ -195,7 +213,7 @@ See [showcase/SAFETY.md](showcase/SAFETY.md).
 
 ## Human Clarification as an Agent Capability
 
-Human Clarification is not treated as a generic “ask the user” fallback.
+Human Clarification is not a generic “ask the user” fallback.
 
 It is a governed workflow stage with:
 
@@ -203,35 +221,51 @@ It is a governed workflow stage with:
 - immutable clarification context
 - explicit human-owned answer field
 - bounded software-owned lifecycle state
-- semantic re-evaluation after the answer
+- semantic re-evaluation
 - evidence promotion only after validation
-- recovery without regenerating the original question
+- crash-safe recovery
+- cross-run reuse only when source semantics match
 
-This lets BIA preserve context while stopping exactly at the point where human knowledge is required.
+This lets BIA stop exactly where human knowledge or authority is required and resume without inventing new context.
 
 ---
 
 ## Preservation-First Documentation Updates
 
-A documentation agent should not replace an existing article with only the newly generated delta.
+BIA treats an existing article as content that must be preserved unless a reviewed change explicitly requires otherwise.
 
-BIA therefore uses a preservation-first update model:
+The update path is:
 
 1. verify the current target article
 2. capture an immutable pre-update snapshot
-3. preserve the existing article body as the baseline
-4. synthesize only the supported update
+3. preserve the existing article body
+4. synthesize only the supported delta
 5. present the combined result for review
-6. require approval before an authorized draft mutation
-7. read the remote article back and verify the expected result
+6. require explicit approval before a bounded draft mutation
+7. read the remote article back and verify the expected state
 
-This design was hardened after a controlled live incident and recovery exercise. The recovery workflow itself became part of the system’s safety architecture.
+---
+
+## Observability
+
+Observability is treated as an engineering prerequisite, not an optional add-on.
+
+Operational diagnostics are designed to expose safe structured metadata such as:
+
+- stage
+- topic
+- locale
+- stable result/failure code
+- retry state
+- whether an external mutation occurred
+
+Blocked or sensitive generated content should not be dumped into logs merely for convenience.
 
 ---
 
 ## Engineering Stack
 
-The private production implementation includes a Python-based runtime with typed contracts and provider-neutral model boundaries.
+The private implementation uses a Python-based runtime with typed contracts and provider-neutral structured model boundaries.
 
 Publicly relevant technologies include:
 
@@ -246,18 +280,19 @@ Publicly relevant technologies include:
 - immutable state and evidence artifacts
 - automated regression tests
 
-Exact production prompts, credentials, identifiers, internal schemas, proprietary operational rules, and private infrastructure are intentionally excluded from this repository.
+Exact prompts, credentials, identifiers, private schemas, internal operational rules, and production infrastructure are intentionally excluded.
 
 ---
 
 ## Repository Contents
 
-- [showcase/ARCHITECTURE.md](showcase/ARCHITECTURE.md) — system architecture and control boundaries
+- [showcase/ARCHITECTURE.md](showcase/ARCHITECTURE.md) — architecture and control boundaries
 - [showcase/WORKFLOW.md](showcase/WORKFLOW.md) — sanitized end-to-end lifecycle
 - [showcase/SAFETY.md](showcase/SAFETY.md) — safety and governance model
-- [showcase/CASE_STUDY.md](showcase/CASE_STUDY.md) — the tutorial-sufficiency Golden Case
-- [examples/sample_clarification_event.json](examples/sample_clarification_event.json) — fictionalized event example
-- [SECURITY.md](SECURITY.md) — public repository disclosure policy
+- [showcase/CASE_STUDY.md](showcase/CASE_STUDY.md) — full Golden Case from insufficiency to scope redirect
+- [examples/sample_clarification_event.json](examples/sample_clarification_event.json) — fictionalized clarification example
+- [examples/sample_scope_redirect_event.json](examples/sample_scope_redirect_event.json) — fictionalized scope-redirect example
+- [SECURITY.md](SECURITY.md) — disclosure and sanitization policy
 
 ---
 
@@ -265,9 +300,11 @@ Exact production prompts, credentials, identifiers, internal schemas, proprietar
 
 **Portfolio showcase of an actively engineered private system.**
 
-The private implementation has progressed through architecture, deterministic core development, integration hardening, controlled live validation, incident recovery, Human Clarification, tutorial-sufficiency gating, and multilingual preview work.
+The private system has progressed through deterministic core development, live integration hardening, Human Clarification, tutorial-sufficiency gating, crash-safe reprocessing, documentation-scope redirect, multilingual guarded generation, preservation-first preview, and bounded CMS write safety.
 
-The system is **not presented here as an unattended fully released production service**. Consequential live actions remain bounded by explicit authorization and human review.
+A controlled scope-redirect E2E test has been accepted successfully with **no publication**.
+
+The system is **not presented as an unattended fully released production service**. Consequential live actions remain bounded by explicit authorization and human review.
 
 ---
 
@@ -278,17 +315,17 @@ This repository does **not** contain:
 - production system prompts
 - private source code
 - credentials or OAuth material
-- internal account or document identifiers
 - private Help Center URLs or article IDs
+- internal account or document identifiers
 - exact production schemas
 - proprietary prompt packs
 - internal release-channel identifiers
 - private Google Drive or Sheets structures
 - customer data
 - operational secrets
-- exact retry timing or deployment parameters
+- exact private deployment parameters
 
-The purpose of this repository is to demonstrate **agent architecture, safety reasoning, workflow design, and engineering quality** without exposing private implementation details.
+The purpose of this repository is to demonstrate **agent architecture, safety reasoning, workflow design, and engineering quality** without weakening the private system.
 
 ---
 
