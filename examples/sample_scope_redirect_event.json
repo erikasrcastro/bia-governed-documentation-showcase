@@ -1,36 +1,29 @@
 {
-  "event_type": "documentation_scope_redirect",
-  "topic_id": "fictional-topic-001",
-  "product": "Example Product",
-  "locale_scope": [
+  "example_event": "human_authorized_public_scope_change",
+  "fictional_topic": "example-topic-001",
+  "supported_locales": [
     "PT-BR",
     "EN-USA",
     "ES-LATAM"
   ],
-  "source": "HUMAN_CLARIFICATION",
-  "tutorial_outcome": "NOT_APPLICABLE",
-  "clarification_result": "DOCUMENTATION_SCOPE_REDIRECT",
-  "documentation_scope_redirect": {
-    "public_documentation_goal": "State that the capability exists and that access is available through a controlled support process.",
-    "customer_next_step": "Contact support to request access or further information.",
-    "prohibited_public_content": [
-      "endpoint path",
-      "authentication details",
+  "decision": "replace_full_tutorial_with_narrow_public_notice",
+  "illustrative_scope": {
+    "allowed_public_message": "State that the capability exists and that access follows a controlled support process.",
+    "recommended_customer_action": "Contact support to request access or further information.",
+    "restricted_topics": [
+      "private endpoint details",
+      "authentication instructions",
       "request parameters",
       "request or response examples",
-      "operational implementation instructions"
+      "operational implementation steps"
     ]
   },
-  "generation_policy": {
-    "scope_is_maximum_public_scope": true,
-    "localization_may_expand_scope": false,
-    "semantic_scope_guard_required": true
+  "illustrative_controls": {
+    "localization_must_not_expand_scope": true,
+    "independent_scope_check_required": true,
+    "cms_write_authorized_by_this_event": false,
+    "publication_authorized_by_this_event": false
   },
-  "safety_outcome": {
-    "tutorial_generation_required": false,
-    "scope_redirect_generation_allowed": true,
-    "cms_mutation_allowed": false,
-    "publication_allowed": false
-  },
+  "schema_note": "Field names are intentionally illustrative and do not mirror the private production schema.",
   "note": "Fictionalized public example. No production identifiers, private content, credentials, or internal implementation details are included."
 }
