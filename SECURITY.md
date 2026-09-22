@@ -45,6 +45,8 @@ Public examples may demonstrate:
 
 They must not contain operational secrets from the private system.
 
+Public example field names must be illustrative rather than a verbatim copy of private production schemas. Conceptual behavior may be demonstrated without exposing exact internal contracts.
+
 ---
 
 ## External Content
